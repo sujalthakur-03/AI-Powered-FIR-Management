@@ -1,0 +1,61 @@
+{% extends 'accounts/base.html' %}
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-2xl font-bold mb-6">FIR Details - #{{ fir.number }}</h2>
+        <!-- FIR Information -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+                <h3 class="font-semibold mb-2">Complainant Details</h3>
+                <p><strong>Name:</strong> {{ fir.complainant_name }}</p>
+                <p><strong>Address:</strong> {{ fir.complainant_address }}</p>
+                <p><strong>Phone:</strong> {{ fir.complainant_phone }}</p>
+                <p><strong>Aadhar:</strong> {{ fir.complainant_aadhar }}</p>
+            </div>
+            <div>
+                <h3 class="font-semibold mb-2">Incident Details</h3>
+                <p><strong>Date Filed:</strong> {{ fir.date_filed }}</p>
+                <p><strong>Location:</strong> {{ fir.incident_place }}</p>
+                <p><strong>Status:</strong> {{ fir.status }}</p>
+            </div>
+        </div>
+        <!-- Statement -->
+        <div class="mb-8">
+            <h3 class="font-semibold mb-2">Statement</h3>
+            <p class="bg-gray-50 p-4 rounded">{{ fir.statement }}</p>
+            {% if audio_url %}
+            <div class="mt-4">
+                <h4 class="font-semibold mb-2">Recorded Statement</h4>
+                <audio controls class="w-full">
+                    <source src="{{ audio_url }}" type="audio/webm">
+                    Your browser does not support the audio element.
+                </audio>
+            </div>
+            {% endif %}
+        </div>
+        <!-- Suggested Laws -->
+        <div class="mt-8">
+            <h3 class="text-xl font-semibold mb-4">AI-Suggested Applicable Laws</h3>
+            {% if suggested_laws %}
+            <div class="space-y-4">
+                {% for suggestion in suggested_laws %}
+                <div class="bg-blue-50 p-4 rounded-lg">
+                    <div class="flex justify-between items-start">
+                        <h4 class="font-semibold text-blue-800">{{ suggestion.section.act_name }} Section {{suggestion.section.section_number }}</h4>
+                        <span class="text-sm bg-blue-200 px-2 py-1 rounded">Relevance: {{ suggestion.score|floatformat:2}}</span>
+                    </div>
+                    <p class="mt-2"><strong>Description:</strong> {{ suggestion.section.description }}</p>
+                    <p class="mt-2"><strong>Matching Terms:</strong> {{ suggestion.matching_terms|join:", " }}</p>
+                    {% if suggestion.section.punishment %}
+                    <p class="mt-2 text-red-700"><strong>Penalties:</strong> {{ suggestion.section.punishment }}</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-gray-600">No relevant laws found for this FIR.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

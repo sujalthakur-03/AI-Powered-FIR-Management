@@ -1,0 +1,539 @@
+{% extends 'accounts/base.html' %}
+{% block title %}Dashboard - FIR Management System{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid">
+    <!-- Welcome Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col">
+                            <h1 class="display-5">Welcome, {{ user.get_full_name }}</h1>
+                            <p class="lead mb-0">
+                                Role: {{ user.role }} |
+                                Badge: {{ user.badge_number }} |
+                                Area: {{ user.jurisdiction_area }}
+                            </p>
+                        </div>
+                        <div class="col-auto">
+                            <button class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#newFIRModal">
+                                + New FIR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add this modal after your existing modals -->
+<div class="modal fade" id="editFIRModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Update FIR Status</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Password verification form -->
+                <div id="passwordVerificationForm">
+                    <div class="mb-3">
+                        <label class="form-label">Enter Your Password to Continue</label>
+                        <input type="password" class="form-control" id="verificationPassword">
+                        <div class="invalid-feedback">Incorrect password</div>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="verifyPasswordBtn">Verify</button>
+                </div>
+
+                <!-- Status update form (initially hidden) -->
+                <div id="statusUpdateForm" style="display: none;">
+                    <input type="hidden" id="firNumberToUpdate">
+                    <div class="mb-3">
+                        <label class="form-label">Update Status</label>
+                        <select class="form-select" id="newFIRStatus">
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" id="updateStatusBtn">Update Status</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+    <!-- Quick Actions -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Search FIRs</h5>
+                    <p class="card-text">Search through existing FIR records</p>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#searchModal">Search</button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Analytics</h5>
+                    <p class="card-text">View FIR statistics and reports</p>
+                    <a href="#" class="btn btn-primary">View Reports</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Laws Reference</h5>
+                    <p class="card-text">Quick access to laws database</p>
+                    <a href="#" class="btn btn-primary">View Laws</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent FIRs -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Recent FIRs</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>FIR Number</th>
+                                    <th>Date Filed</th>
+                                    <th>Complainant</th>
+                                    <th>Nature of Crime</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% if recent_firs %}
+                                {% for fir in recent_firs %}
+                                <tr>
+                                    <td>{{ fir.number }}</td>
+                                    <td>{{ fir.date_filed }}</td>
+                                    <td>{{ fir.complainant_name }}</td>
+                                    <td>{{ fir.crime_type }}</td>
+                                    <td>
+                                        <span class="badge bg-{{ fir.status_color }}" style="background-color: aqua; color: black;">
+                                            {{ fir.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{% url 'view_fir' fir.number %}" class="btn btn-primary">View FIR</a>
+                                            <button onclick="openEditModal('{{ fir.number }}')" class="btn btn-secondary">Edit</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                                {% else %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No recent FIRs found</td>
+                                </tr>
+                                {% endif %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New FIR Modal -->
+<div class="modal fade" id="newFIRModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Register New FIR</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="newFIRForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Full Name</label>
+                        <input type="text" class="form-control" name="full_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Address</label>
+                        <textarea class="form-control" name="address" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Aadhar Card Number</label>
+                        <input type="text" class="form-control" name="aadhar_number" pattern="\d{12}"
+                            title="Please enter a 12-digit Aadhar number" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Mobile Number</label>
+                        <input type="tel" class="form-control" name="mobile_number" pattern="\d{10}"
+                            title="Please enter a 10-digit mobile number" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Place of Incident</label>
+                        <input type="text" class="form-control" name="incident_place">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Statement</label>
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-primary" id="recordButton">
+                                Start Recording
+                            </button>
+                        </div>
+                        <textarea class="form-control mt-2" rows="4" id="statementText" name="statement"></textarea>
+                    </div>
+                    <input type="hidden" id="audioBlob" name="audio_blob">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="submitFIR">Submit FIR</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Modal -->
+<div class="modal fade" id="searchModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Search FIRs</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="searchForm">
+                    <div class="mb-3">
+                        <label class="form-label">FIR Number</label>
+                        <input type="text" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date Range</label>
+                        <div class="row">
+                            <div class="col">
+                                <input type="date" class="form-control">
+                            </div>
+                            <div class="col">
+                                <input type="date" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select">
+                            <option value="">All</option>
+                            <option value="open">Open</option>
+                            <option value="in_progress">In Progress</option>
+                            <option value="closed">Closed</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary">Search</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dynamic Elements -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <!-- Carousel -->
+        <div id="firCarousel" class="carousel slide" data-bs-ride="carousel">
+            <div class="carousel-inner">
+                <div class="carousel-item active">
+                    <img src="{% static 'accounts/images/image1.jpg' %}" class="d-block w-100" alt="How to Register FIR">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h5>How to Register an FIR</h5>
+                        <p>Step-by-step guide to file an FIR</p>
+                    </div>
+                </div>
+                <div class="carousel-item">
+                    <img src="{% static 'accounts/images/image2.jpg' %}" class="d-block w-100" alt="Safety Tips">
+                    <div class="carousel-caption d-none d-md-block">
+                        <h5>Safety Tips for Women</h5>
+                        <p>Important safety measures for women</p>
+                    </div>
+                </div>
+            </div>
+            <button class="carousel-control-prev" type="button" data-bs-target="#firCarousel" data-bs-slide="prev">
+                <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Previous</span>
+            </button>
+            <button class="carousel-control-next" type="button" data-bs-target="#firCarousel" data-bs-slide="next">
+                <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                <span class="visually-hidden">Next</span>
+            </button>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <!-- Toll-free Number -->
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">Emergency Contact</h5>
+                <p class="card-text">Toll-free number: <strong>1800-XXX-XXXX</strong></p>
+            </div>
+        </div>
+        <!-- Quick Tips -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Quick Safety Tips</h5>
+                <ul>
+                    <li>Always be aware of your surroundings</li>
+                    <li>Keep emergency contacts handy</li>
+                    <li>Trust your instincts</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% block extra_js %}
+<script>
+    // Global variables for media handling
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let audioStream = null;
+
+    // DOM Elements
+    const recordButton = document.getElementById('recordButton');
+    const statementText = document.getElementById('statementText');
+    const newFIRForm = document.getElementById('newFIRForm');
+    const submitFIRButton = document.getElementById('submitFIR');
+
+    // Add event listeners
+    recordButton.addEventListener('click', toggleRecording);
+    submitFIRButton.addEventListener('click', submitFIR);
+
+    // Recording status tracking
+    let isRecording = false;
+
+    async function toggleRecording() {
+        if (!isRecording) {
+            await startRecording();
+        } else {
+            await stopRecording();
+        }
+    }
+
+    async function startRecording() {
+        try {
+            // Request microphone access
+            audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+            // Create new MediaRecorder instance
+            mediaRecorder = new MediaRecorder(audioStream, {
+                mimeType: 'audio/webm'
+            });
+
+            // Clear previous chunks
+            audioChunks = [];
+
+            // Handle data available event
+            mediaRecorder.addEventListener('dataavailable', event => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            });
+
+            // Handle recording stop
+            mediaRecorder.addEventListener('stop', () => {
+                // Stop all audio tracks
+                audioStream.getTracks().forEach(track => track.stop());
+
+                // Create blob and URL
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                const audioUrl = URL.createObjectURL(audioBlob);
+
+                // Remove existing audio player if any
+                const existingPlayer = document.getElementById('audioPreview');
+                if (existingPlayer) {
+                    existingPlayer.remove();
+                }
+
+                // Create and add new audio player
+                const audioElement = document.createElement('audio');
+                audioElement.id = 'audioPreview';
+                audioElement.src = audioUrl;
+                audioElement.controls = true;
+                audioElement.className = 'mt-3 w-100';
+
+                // Add audio player after the record button
+                recordButton.parentNode.insertBefore(audioElement, recordButton.nextSibling);
+
+                // Update UI
+                statementText.value = 'Audio recorded successfully. You can play it back above. Add relevent Keywords';
+                recordButton.classList.remove('btn-danger');
+                recordButton.classList.add('btn-primary');
+            });
+
+            // Start recording
+            mediaRecorder.start();
+            isRecording = true;
+
+            // Update UI
+            recordButton.textContent = 'Stop Recording';
+            recordButton.classList.remove('btn-primary');
+            recordButton.classList.add('btn-danger');
+            statementText.value = 'Recording in progress...';
+
+        } catch (error) {
+            console.error('Error starting recording:', error);
+            alert('Failed to start recording: ' + error.message);
+        }
+    }
+
+    async function stopRecording() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            isRecording = false;
+            recordButton.textContent = 'Start Recording';
+        }
+    }
+
+    async function submitFIR() {
+        // Create FormData object
+        const formData = new FormData(newFIRForm);
+
+        // Add audio blob if recording exists
+        if (audioChunks.length > 0) {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            formData.append('audio_blob', audioBlob, 'recording.webm');
+        }
+
+        try {
+            const response = await fetch('/submit_fir/', {
+                method: 'POST',
+                body: formData,
+                credentials: 'same-origin'
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('FIR submitted successfully!');
+                location.reload();
+            } else {
+                alert('Error submitting FIR. Please try again.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while submitting the FIR. Please try again.');
+        }
+    }
+
+    // Clean up function
+    function cleanupRecording() {
+        if (audioStream) {
+            audioStream.getTracks().forEach(track => track.stop());
+        }
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop(s);
+        }
+    }
+
+    // Add cleanup on modal close
+    document.getElementById('newFIRModal').addEventListener('hidden.bs.modal', cleanupRecording);
+
+    let currentFIRNumber = null;
+
+    function openEditModal(firNumber) {
+        currentFIRNumber = firNumber;
+        document.getElementById('firNumberToUpdate').value = firNumber;
+        document.getElementById('passwordVerificationForm').style.display = 'block';
+        document.getElementById('statusUpdateForm').style.display = 'none';
+        document.getElementById('verificationPassword').value = '';
+        new bootstrap.Modal(document.getElementById('editFIRModal')).show();
+    }
+
+    document.getElementById('verifyPasswordBtn').addEventListener('click', async function() {
+        const password = document.getElementById('verificationPassword').value;
+        
+        try {
+            const response = await fetch('/verify_password/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ password: password })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                document.getElementById('passwordVerificationForm').style.display = 'none';
+                document.getElementById('statusUpdateForm').style.display = 'block';
+            } else {
+                document.getElementById('verificationPassword').classList.add('is-invalid');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while verifying the password');
+        }
+    });
+
+    document.getElementById('updateStatusBtn').addEventListener('click', async function() {
+        const newStatus = document.getElementById('newFIRStatus').value;
+        
+        try {
+            const response = await fetch('/update_fir_status/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    fir_number: currentFIRNumber,
+                    new_status: newStatus
+                })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                alert('FIR status updated successfully!');
+                location.reload();
+            } else {
+                alert('Error updating FIR status');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while updating the status');
+        }
+    });
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+{% endblock %}
+{% endblock %}

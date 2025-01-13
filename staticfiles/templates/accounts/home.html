@@ -1,0 +1,18 @@
+{% extends 'accounts/base.html' %}
+
+{% block title %}Welcome - FIR Management System{% endblock %}
+
+{% block content %}
+<div class="container text-center">
+    <h1 class="display-4">Welcome to FIR Management System</h1>
+    <p class="lead">A digital platform for managing First Information Reports</p>
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-4">
+            <div class="d-grid gap-2">
+                <a href="{% url 'login' %}" class="btn btn-primary btn-lg">Login</a>
+                <a href="{% url 'signup' %}" class="btn btn-secondary btn-lg">Sign Up</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
